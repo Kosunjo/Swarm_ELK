@@ -1,6 +1,15 @@
 ---
-- name: Ping all hosts
-  hosts: all
+- hosts: web1
+  become: yes
   tasks:
-    - name: Ping
-      ansible.builtin.ping:
+    - name: Pull latest code from worker branch
+      git:
+        repo: 'https://github.com/your-username/toy_project.git'
+        dest: /home/ubuntu/worker_dir
+        version: worker
+        force: yes
+
+    - name: Run docker-compose up
+      shell: docker-compose up -d
+      args:
+        chdir: /home/ubuntu/worker_dir
