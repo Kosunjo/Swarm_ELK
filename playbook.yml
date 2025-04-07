@@ -5,3 +5,16 @@
     - name: Ping
       ansible.builtin.ping:
 
+- name: Run pwd on all hosts
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Print working directory
+      shell: pwd
+      register: pwd_result
+
+    - name: Show result
+      debug:
+        var: pwd_result.stdout
+
