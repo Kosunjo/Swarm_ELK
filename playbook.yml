@@ -4,7 +4,7 @@
   tasks:
     - name: Pull latest code from worker branch
       git:
-        repo: 'https://github.com/your-username/toy_project.git'
+        repo: 'https://github.com/2guno/toy_project.git'
         dest: /home/ubuntu/worker_dir
         version: worker
         force: yes
