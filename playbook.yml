@@ -2,10 +2,13 @@
 - hosts: web1
   become: yes
   tasks:
+    - name: Ping the server
+      ansible.builtin.ping:
+
     - name: Pull latest code from worker branch
       git:
         repo: 'https://github.com/2guno/toy_project.git'
-        dest: /home/ubuntu/worker_dir
+        dest: /home/user1
         version: worker
         force: yes
 
