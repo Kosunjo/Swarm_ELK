@@ -110,16 +110,16 @@ services:
       - WEATHER_API_URL=http://apis.data.go.kr/B552584/ArpltnInforInqireSvc # 기본 URL 유지
       - API_ENDPOINT=getCtprvnRltmMesureDnsty # 사용할 엔드포인트 명시
       - WEATHER_API_KEY=T/0a0Zv1KpQezAXjhW6gVBOsH2byIdzco4/r8jqvABk6kTJtGu+x5waz9HxSI57LuevBtuFNJ0td3tiESTVaBA== # *** 중요: 반드시 URL 인코딩 안된 원본 키 사용 ***
-      - SIDO_NAME=서울 # 조회할 시도 이름 명시
+      - SIDO_NAME=전국 # 조회할 시도 이름 명시
       # 수집 주기 (10분 = 600초, API 제한에 따라 조정 필요)
       - COLLECTION_INTERVAL=600
     networks:
       - elk-kafka-network # 네트워크 이름 변경
-    depends_on: # Kafka Manager 의존성 제거 (선택 사항)
-      - daa-kafka1
-      - daa-kafka2
-      - daa-zoo1
-      - daa-zoo2
+    depends_on:
+      daa-kafka1:
+        condition: service_healthy
+      daa-kafka2:
+        condition: service_healthy
   
   stock-producer:
     build:

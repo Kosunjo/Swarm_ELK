@@ -7,7 +7,8 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List
-
+import geo_point
+from geo_point import station_coordinates
 # --- 로깅 설정 ---
 logging.basicConfig(
     level=logging.INFO,
@@ -37,59 +38,83 @@ def get_seoul_air_quality_data() -> Optional[List[Dict[str, Any]]]:
         return None
 
     api_url = f"{API_BASE_URL}/{API_ENDPOINT}"
+    all_items: List[Dict[str, Any]] = [] # 모든 페이지 결과를 합칠 리스트
+    
 
-    params = {
-        'serviceKey': API_KEY,
-        'returnType': 'json',
-        'numOfRows': '100', # 서울시 측정소 개수보다 충분히 크게 설정
-        'pageNo': '1',
-        'sidoName': SIDO_NAME,
-        'ver': API_VERSION
-    }
-    # 요청 전 파라미터 로그 (API 키 제외)
-    params_log = {k:v for k, v in params.items() if k != 'serviceKey'}
-    logger.info(f"API 요청 시작: {api_url} (Params: {params_log})")
+    for i in range(9):
+        current_page_no = i + 1 # 페이지 번호는 1부터 시작    
+        params = {
+            'serviceKey': API_KEY,
+            'returnType': 'json',
+            'numOfRows': '100', # 한 번에 가져올 최대 row 수
+            'pageNo': str(current_page_no), # 현재 페이지 번호
+            'sidoName': SIDO_NAME,
+            'ver': API_VERSION
+        }
+        # 요청 전 파라미터 로그 (API 키 제외)
+        params_log = {k:v for k, v in params.items() if k != 'serviceKey'}
+        logger.info(f"API 요청 시작: Page={current_page_no}/8")
+        logger.debug(f"URL: {api_url}, Params: {params_log}")
 
-    try:
-        response = requests.get(api_url, params=params, timeout=25) # 타임아웃 증가
-        response.raise_for_status()
-
-        logger.info(f"API 응답 수신 (Status: {response.status_code}, Size: {len(response.content)} bytes)")
-        data = response.json()
-
-        header = data.get('response', {}).get('header', {})
-        result_code = header.get('resultCode')
-        result_msg = header.get('resultMsg')
-
-        if result_code != '00':
-            logger.error(f"API 응답 오류: Code={result_code}, Msg={result_msg}")
-            return None
-
-        items = data.get('response', {}).get('body', {}).get('items')
-
-        if not items:
-            logger.warning("API 응답에 측정 항목(items)이 없습니다.")
-            return None
-
-        # items가 단일 객체일 경우 리스트로 변환
-        if not isinstance(items, list):
-            items = [items]
-
-        logger.info(f"{len(items)}개의 측정소 데이터를 가져왔습니다.")
-        return items # 측정소 데이터 리스트 반환
-
-    except requests.exceptions.RequestException as e:
-        logger.error(f"API 요청 실패: {e}")
-        return None
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON 파싱 오류: {e}")
         try:
-            logger.error(f"파싱 실패 응답 내용 (일부): {response.text[:500]}")
-        except: pass
+            response = requests.get(api_url, params=params, timeout=25)
+            response.raise_for_status() # 200 OK 아니면 예외 발생
+
+            logger.info(f"API 응답 수신: Page={current_page_no} (Status: {response.status_code})")
+            data = response.json()
+
+            header = data.get('response', {}).get('header', {})
+            result_code = header.get('resultCode')
+            result_msg = header.get('resultMsg')
+
+            # API 자체 오류 처리
+            if result_code != '00':
+                logger.error(f"API 응답 오류: Page={current_page_no}, Code={result_code}, Msg={result_msg}")
+                # 오류 발생 시 해당 페이지만 건너뛰고 다음 페이지 시도
+                continue # 다음 루프 반복으로 넘어감
+
+            body = data.get('response', {}).get('body', {})
+            items = body.get('items')
+
+            # 해당 페이지에 아이템이 없는 경우
+            if not items:
+                logger.info(f"Page={current_page_no} 에서 측정 항목(items)이 없습니다.")
+                # 아이템이 없어도 다음 페이지 시도
+                continue # 다음 루프 반복으로 넘어감
+
+            # 단일 객체일 경우 리스트로 변환
+            if not isinstance(items, list):
+                items = [items]
+
+            logger.info(f"Page={current_page_no}: {len(items)}개의 측정소 데이터 추가.")
+            all_items.extend(items) # 결과 리스트에 현재 페이지 아이템 추가
+
+            # (선택적) API 요청 간 짧은 지연 추가
+            time.sleep(0.2)
+
+        # 루프 내에서 발생하는 예외 처리
+        except requests.exceptions.RequestException as e:
+            logger.error(f"API 요청 실패: Page={current_page_no}, Error={e}")
+            # 오류 발생 시 해당 페이지만 건너뛰고 다음 페이지 시도
+            continue # 다음 루프 반복으로 넘어감
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON 파싱 오류: Page={current_page_no}, Error={e}")
+            try: logger.error(f"파싱 실패 응답 내용 (일부): {response.text[:500]}")
+            except: pass
+            # 오류 발생 시 해당 페이지만 건너뛰고 다음 페이지 시도
+            continue # 다음 루프 반복으로 넘어감
+        except Exception as e:
+            logger.error(f"데이터 처리 중 예상치 못한 오류: Page={current_page_no}, Error={e}", exc_info=True)
+            # 오류 발생 시 해당 페이지만 건너뛰고 다음 페이지 시도
+            continue # 다음 루프 반복으로 넘어감
+
+    # for 루프가 모두 완료된 후 최종 결과 반환
+    if not all_items:
+        logger.warning("총 8페이지 요청 결과, 수집된 측정소 데이터가 없습니다.")
         return None
-    except Exception as e:
-        logger.error(f"데이터 가져오는 중 예상치 못한 오류: {e}", exc_info=True)
-        return None
+    else:
+        logger.info(f"총 8페이지 요청 완료. 최종 {len(all_items)}개의 측정소 데이터 수집.")
+        return all_items
 
 # --- Kafka 관련 함수 ---
 def create_kafka_producer() -> Optional[KafkaProducer]:
@@ -132,48 +157,7 @@ def send_station_data_to_kafka(producer: KafkaProducer, station_data: Dict[str, 
     if not station_data:
         logger.warning("전송할 측정소 데이터가 없습니다.")
         return
-    station_coordinates = {
-    "중구": {"lat": 37.564639, "lon": 126.975961},
-    "한강대로": {"lat": 37.549389, "lon": 126.971519},
-    "종로구": {"lat": 37.572025, "lon": 127.005028},
-    "청계천로": {"lat": 37.56865, "lon": 126.998083},
-    "종로": {"lat": 37.570633, "lon": 126.996783},
-    "용산구": {"lat": 37.532057, "lon": 127.002371},
-    "광진구": {"lat": 37.544639, "lon": 127.095706},
-    "성동구": {"lat": 37.542036, "lon": 127.049685},
-    "강변북로": {"lat": 37.539283, "lon": 127.040943},
-    "중랑구": {"lat": 37.584953, "lon": 127.094283},
-    "동대문구": {"lat": 37.576169, "lon": 127.029642},
-    "홍릉로": {"lat": 37.580167, "lon": 127.044856},
-    "성북구": {"lat": 37.606667, "lon": 127.027264},
-    "정릉로": {"lat": 37.603593, "lon": 127.026007},
-    "도봉구": {"lat": 37.654278, "lon": 127.029333},
-    "은평구": {"lat": 37.6104714, "lon": 126.9335038},
-    "서대문구": {"lat": 37.593749, "lon": 126.949534},
-    "마포구": {"lat": 37.55561, "lon": 126.905457},
-    "신촌로": {"lat": 37.554936, "lon": 126.937619},
-    "강서구": {"lat": 37.544656, "lon": 126.835094},
-    "공항대로": {"lat": 37.562821, "lon": 126.826071},
-    "구로구": {"lat": 37.498498, "lon": 126.889692},
-    "영등포구": {"lat": 37.526339, "lon": 126.896256},
-    "영등포로": {"lat": 37.520222, "lon": 126.904967},
-    "동작구": {"lat": 37.480989, "lon": 126.971547},
-    "동작대로 중앙차로": {"lat": 37.489495, "lon": 126.982489},
-    "관악구": {"lat": 37.477837, "lon": 126.959128},
-    "강남구": {"lat": 37.5175623, "lon": 127.0472893},
-    "서초구": {"lat": 37.504547, "lon": 126.994611},
-    "도산대로": {"lat": 37.516083, "lon": 127.019694},
-    "강남대로": {"lat": 37.482867, "lon": 127.035621},
-    "송파구": {"lat": 37.502685, "lon": 127.092385},
-    "강동구": {"lat": 37.545089, "lon": 127.136806},
-    "천호대로": {"lat": 37.534035, "lon": 127.139172},
-    "금천구": {"lat": 37.452386, "lon": 126.908333},
-    "시흥대로": {"lat": 37.474899, "lon": 126.898657},
-    "강북구": {"lat": 37.64793, "lon": 127.011952},
-    "양천구": {"lat": 37.523286, "lon": 126.858689},
-    "노원구": {"lat": 37.657415, "lon": 127.067876},
-    "화랑로": {"lat": 37.617315, "lon": 127.07512}
-    }
+    
 
     station_name = station_data.get('stationName')
     # Kafka 메시지에 공통 메타데이터 추가

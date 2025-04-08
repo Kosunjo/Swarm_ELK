@@ -8,6 +8,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy producer script
 COPY producer.py .
+COPY geo_point.py .
 
 # Run the producer
 CMD ["python", "producer.py"]
