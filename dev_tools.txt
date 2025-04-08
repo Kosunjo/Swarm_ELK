@@ -1,0 +1,14 @@
+geo_point 추가
+GET air-quality-seoul-*/_search
+{
+  "size": 0,
+  "aggs": {
+    "stations": {
+      "terms": {
+        "field": "station.name.keyword",
+        "size": 100
+      }
+    }
+  }
+}
+
