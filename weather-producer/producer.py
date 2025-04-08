@@ -162,6 +162,7 @@ def send_station_data_to_kafka(producer: KafkaProducer, station_data: Dict[str, 
     station_name = station_data.get('stationName')
     # Kafka 메시지에 공통 메타데이터 추가
     message = {
+        "source": "air_quality_api",
         "retrieved_at": retrieved_time, # 데이터 수집 시간
         "sidoName": SIDO_NAME,         # 시도 이름 (Logstash에서 station.province로 변경됨)
         **station_data                 # 원본 측정소 데이터 필드들을 그대로 포함
