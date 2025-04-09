@@ -3,7 +3,6 @@
   hosts: all
   become: true
   become_method: sudo
-  become_user: root
 
   vars:
     repo_url: https://github.com/2guno/toy_project.git
