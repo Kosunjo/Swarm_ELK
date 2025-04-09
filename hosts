@@ -1,7 +1,7 @@
-[workers]
-worker1 ansible_host=192.168.1.98 ansible_user=user1
-worker2 ansible_host=192.168.2.137 ansible_user=user1
+# [workers]
+# worker1 ansible_host=192.168.1.98 ansible_user=user1
+# worker2 ansible_host=192.168.2.137 ansible_user=user1
 
 [web]
-web1 ansible_host=192.168.2.12 ansible_user=user1
-web2 ansible_host=192.168.2.137 ansible_user=user1
+web1 ansible_host=192.168.2.12 ansible_user=user1 ansible_ssh_private_key_file=/var/lib/jenkins/.ssh/project1.pem
+# web2 ansible_host=192.168.2.137 ansible_user=user1
