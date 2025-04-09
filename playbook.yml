@@ -2,10 +2,13 @@
 - name: Ping all hosts
   hosts: all
   become: true
+  become_method: sudo
+  become_user: root
 
   vars:
     repo_url: https://github.com/2guno/toy_project.git
     project_dir: /home/user1/project
+    ansible_become_password: ""
 
   tasks:
     - name: Ping
