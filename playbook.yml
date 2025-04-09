@@ -56,7 +56,7 @@
       become_user: user1
 
     - name: Run docker-compose up
-      shell: docker-compose up -d
+      shell: docker stack deploy -c=docker-compose.yml web
       args:
         chdir: "{{ project_dir }}"
 
