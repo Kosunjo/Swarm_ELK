@@ -17,6 +17,31 @@
       debug:
         msg: "Current working directory is {{ current_dir.stdout }}"
 
+    - name: Ensure project directory exists
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: user1
+        group: user1
+        mode: '0755'
+
+    - name: Clone the repository if not present
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ project_dir }}"
+        version: worker
+        force: yes
+        update: yes
+        accept_hostkey: yes
+      become_user: user1
+
+    - name: Pull latest changes from worker branch
+      shell: |
+        git pull origin worker
+      args:
+        chdir: "{{ project_dir }}"
+      become_user: user1
+
     - name: Run docker-compose up
       shell: docker-compose up -d
       args:
