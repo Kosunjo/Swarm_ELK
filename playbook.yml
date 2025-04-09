@@ -51,7 +51,7 @@
     - name: Run docker-compose up
       shell: docker-compose up -d
       args:
-        chdir: /home/user1
+        chdir: {{ project_dir}}
 
     - name: List running containers
       shell: docker container ls
