@@ -169,29 +169,29 @@ services:
       daa-kafka3:
         condition: service_healthy
   
-#  stock-producer:
-#    build:
-#      context: ./stock-producer
-#      dockerfile: Dockerfile
-#    container_name: stock-producer
-#    volumes:
-#      - ./stock-producer:/app
-#    environment:
-#      - KAFKA_BOOTSTRAP_SERVERS=daa-kafka1:19092,daa-kafka2:19093,daa-kafka3:19094
-#      - KAFKA_TOPIC=stock-data
-#      - STOCK_API_URL=https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService
-#      - STOCK_API_KEY=845anlixp4ZURKviguWGdgAPCY28n3cv0vZcLptL6dqQJChP+5tyuiIGSVqf3usDpOmSU2E5BAL8XHzoFlfg0A==
-#      - API_ENDPOINT=getStockPriceInfo
-#      - COLLECTION_INTERVAL=60
-#    networks:
-#      - elk-kafka-network
-#    depends_on:
-#      daa-kafka1:
-#        condition: service_healthy
-#      daa-kafka2:
-#        condition: service_healthy
-#      daa-kafka3:
-#        condition: service_healthy
+  stock-producer:
+    build:
+      context: ./stock-producer
+      dockerfile: Dockerfile
+      container_name: stock-producer
+    volumes:
+      - ./stock-producer:/app
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=daa-kafka1:19092,daa-kafka2:19093,daa-kafka3:19094
+      - KAFKA_TOPIC=stock-data
+      - STOCK_API_URL=https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService
+      - STOCK_API_KEY=845anlixp4ZURKviguWGdgAPCY28n3cv0vZcLptL6dqQJChP+5tyuiIGSVqf3usDpOmSU2E5BAL8XHzoFlfg0A==
+      - API_ENDPOINT=getStockPriceInfo
+      - COLLECTION_INTERVAL=60
+    networks:
+      - elk-kafka-network
+    depends_on:
+      daa-kafka1:
+        condition: service_healthy
+      daa-kafka2:
+        condition: service_healthy
+      daa-kafka3:
+        condition: service_healthy
 
 
   # Kafka Manager (선택 사항, 필요 없다면 제거 가능)
