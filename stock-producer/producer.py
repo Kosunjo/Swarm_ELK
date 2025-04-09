@@ -7,6 +7,7 @@ import logging
 import os
 from datetime import datetime
 from typing import Optional, Dict, Any
+from datetime import timedelta
 
 # --- 로깅 설정 ---
 logging.basicConfig(
@@ -28,16 +29,42 @@ API_KEY = os.getenv("STOCK_API_KEY", "").strip("'").strip('"') # 기본값 제�
 API_ENDPOINT = os.getenv('API_ENDPOINT', 'getStockPriceInfo')
 COLLECTION_INTERVAL_SECONDS = int(os.getenv('COLLECTION_INTERVAL', '86400')) # 기본값 1시간(3600초)으로 변경 (API 특성 고려)
 
+# --- 시총 순위 20위 주식식 종목 리스트 ---
+BLUECHIP_STOCKS = {
+    "005930",  # 삼성전자
+    #"000660",  # SK하이닉스
+    #"373220",  # LG에너지솔루션
+    #"207940",  # 삼성바이오로직스
+    #"005380",  # 현대차
+    #"005935",  # 삼성전자우
+    #"068270",  # 셀트리온
+    #"000270",  # 기아
+    #"012450",  # 한화에어로스페이스
+    #"035420",  # NAVER
+    #"105560",  # KB금융
+    #"329180",  # HD현대중공업
+    #"055550",  # 신한지주
+    #"012330",  # 현대모비스
+    #"138040",  # 메리츠금융지주
+    #"005490",  # POSCO홀딩스
+    #"042660",  # 한화오션
+    #"028260",  # 삼성물산
+    #"259960",  # 크래프톤
+    #"035720",  # 카카오"""
+}
+
+
 # --- 데이터 가져오기 함수 ---
-def get_all_stock_price_data() -> list[Dict[str, Any]]:
+def get_all_stock_price_data(likeSrtnCd: str) -> list[Dict[str, Any]]:
     if not API_KEY:
         logger.error("API 키가 설정되지 않았습니다.")
         return []
 
     api_url = f"{API_BASE_URL}/{API_ENDPOINT}"
-    basDt = '20250407'  # 오늘 날짜
+    one_month_ago = datetime.today() - timedelta(days=30)
+    beginBasDt = one_month_ago.strftime('%Y%m%d')
     page_no = 1
-    num_of_rows = 100
+    num_of_rows = 50
 
     collected_data = []
 
@@ -47,7 +74,8 @@ def get_all_stock_price_data() -> list[Dict[str, Any]]:
             'resultType': 'json',
             'numOfRows': str(num_of_rows),
             'pageNo': str(page_no),
-            'basDt': basDt
+            'beginBasDt': beginBasDt,
+            'likeSrtnCd': likeSrtnCd
         }
 
         try:
@@ -136,35 +164,31 @@ def main():
 
     
     try:
-        while True:
-            today = datetime.today()
-            # 주말 체크 (토: 5, 일: 6)
-            if today.weekday() >= 5:
-                logger.info("📅 주말입니다. 데이터 수집을 건너뜁니다.")
-                logger.info(f"⏳ 다음 수집까지 {COLLECTION_INTERVAL_SECONDS}초 대기...")
-                time.sleep(COLLECTION_INTERVAL_SECONDS)
-                continue
-
+        cont = 1
+        for likeSrtnCd in BLUECHIP_STOCKS:
             logger.info("-" * 20)
-            logger.info("주식시세 데이터 수집 및 전송 시작...")
+            logger.info(f"📦 [{cont}] 종목 {likeSrtnCd} 데이터 수집 시작...")
 
-            all_data = get_all_stock_price_data()
+            all_data = get_all_stock_price_data(likeSrtnCd)
             if all_data:
                 for item in all_data:
                     message = {
                         "source": "stock_price_api",
                         "api_endpoint": API_ENDPOINT,
-                        "search_date": today.strftime('%Y-%m-%d'),
+                        "search_date": datetime.today().strftime('%Y-%m-%d'),
                         "retrieved_at": datetime.now().isoformat(),
+                        "symbol": likeSrtnCd,
                         "data": item
                     }
                     send_to_kafka(producer, message)
+                    cont += 1
+                    logger.info(f"✅ 종목 {likeSrtnCd} Kafka 전송 완료 (총 {len(all_data)}개 항목)")
             else:
                 logger.info("📭 수집된 데이터가 없습니다.")
 
-            logger.info(f"⏳ 다음 수집까지 {COLLECTION_INTERVAL_SECONDS}초 대기...")
-            time.sleep(COLLECTION_INTERVAL_SECONDS)
-
+            
+        logger.info(f"⏳ 다음 수집까지 {COLLECTION_INTERVAL_SECONDS}초 대기...")
+        time.sleep(COLLECTION_INTERVAL_SECONDS)
     except KeyboardInterrupt:
         logger.info("Ctrl+C 감지됨. 종료 절차를 시작합니다.")
     except Exception as e:
