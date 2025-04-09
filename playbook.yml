@@ -1,6 +1,12 @@
 ---
 - name: Ping all hosts
   hosts: all
+  become: true
+
+  vars:
+    repo_url: https://github.com/2guno/toy_project.git
+    project_dir: /home/user1/project
+
   tasks:
     - name: Ping
       ansible.builtin.ping:
