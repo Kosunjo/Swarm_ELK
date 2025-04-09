@@ -1,0 +1,9 @@
+---
+- name: Ping all hosts
+  hosts: all
+  become: true
+  become_method: sudo
+
+  tasks:
+    - name: Ping
+      ansible.builtin.ping:
