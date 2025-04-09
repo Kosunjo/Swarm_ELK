@@ -40,6 +40,11 @@
         update: yes
         accept_hostkey: yes
       become_user: user1
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+        http_proxy: ""
+        https_proxy: ""
+        no_proxy: "localhost,127.0.0.1,::1"
 
     - name: Pull latest changes from worker branch
       shell: |
