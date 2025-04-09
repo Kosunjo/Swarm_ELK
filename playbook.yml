@@ -9,6 +9,14 @@
       debug:
         msg: "Host IP is {{ ansible_default_ipv4.address }}"
 
+    - name: show pwd
+      shell: pwd
+      register: current_dir
+
+    - name: Print working directory
+      debug:
+        msg: "Current working directory is {{ current_dir.stdout }}"
+
     - name: Run docker-compose up
       shell: docker-compose up -d
       args:
