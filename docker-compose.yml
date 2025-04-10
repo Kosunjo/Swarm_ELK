@@ -212,7 +212,7 @@ services:
 
   
   nginx:
-    image: mynginx:1.0
+    image: 192.168.0.89:5000/mynginx:1.0
     deploy:
       replicas: 2
       placement:
@@ -243,7 +243,7 @@ services:
         constraints: [node.role == manager]
 
   elasticsearch:
-    image: my-elasticsearch:1.0
+    image: 192.168.0.89:5000/my-elasticsearch:1.0
     deploy: 
       placement:
         constraints: [node.role == worker]
@@ -263,7 +263,7 @@ services:
     # depends_on 제거 (Logstash/Kibana가 ES에 의존하므로 순서상 문제 없음)
 
   logstash:
-    image: mylogstash:1.0
+    image: 192.168.0.89:5000/mylogstash:1.0
     deploy: 
       placement:
         constraints: [node.role == worker]
