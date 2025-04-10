@@ -156,7 +156,7 @@ services:
       # API 설정
       - WEATHER_API_URL=http://apis.data.go.kr/B552584/ArpltnInforInqireSvc # 기본 URL 유지
       - API_ENDPOINT=getCtprvnRltmMesureDnsty # 사용할 엔드포인트 명시
-      - WEATHER_API_KEY=T/0a0Zv1KpQezAXjhW6gVBOsH2byIdzco4/r8jqvABk6kTJtGu+x5waz9HxSI57LuevBtuFNJ0td3tiESTVaBA== # *** 중요: 반드시 URL 인코딩 안된 원본 키 사용 ***
+      - WEATHER_API_KEY=845anlixp4ZURKviguWGdgAPCY28n3cv0vZcLptL6dqQJChP+5tyuiIGSVqf3usDpOmSU2E5BAL8XHzoFlfg0A== # *** 중요: 반드시 URL 인코딩 안된 원본 키 사용 ***
       - SIDO_NAME=전국 # 조회할 시도 이름 명시
       # 수집 주기 (10분 = 600초, API 제한에 따라 조정 필요)
       - COLLECTION_INTERVAL=600
