@@ -1,8 +1,28 @@
-server.host: "0.0.0.0"
-server.name: kibana
-elasticsearch.hosts: ["http://elasticsearch:9200"]
-elasticsearch.username: elastic
-elasticsearch.password: test123
-xpack.maps.enabled: true
-xpack.maps.showMapVisualizationTypes: true
-map.includeElasticMapsService: true
+events {}
+
+http {
+  server {
+    listen 80;
+
+    location / {
+      proxy_pass http://kibana:5601;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location /app/management {
+      auth_basic "Restricted";
+      auth_basic_user_file /etc/nginx/.htpasswd;
+
+      proxy_pass http://kibana:5601;
+      proxy_http_version 1.1;
+      proxy_set_header Host $host;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+  }
+}
