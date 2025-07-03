@@ -1,18 +1,68 @@
----
-- hosts: web1
-  become: yes
+- name: Setup and deploy project
+  hosts: all
+  become: true
+  become_method: sudo
+
+  vars:
+    repo_url: https://github.com/2guno/toy_project.git
+    project_dir: /home/user1/project
+    ansible_become_password: ""
+
   tasks:
     - name: Ping the server
       ansible.builtin.ping:
 
-    - name: Pull latest code from worker branch
+    - name: Show server IP
+      debug:
+        msg: "Host IP is {{ ansible_default_ipv4.address }}"
+
+    - name: Show current working directory
+      shell: pwd
+      register: current_dir
+
+    - name: Print working directory
+      debug:
+        msg: "Current working directory is {{ current_dir.stdout }}"
+
+    - name: Ensure project directory exists
+      file:
+        path: "{{ project_dir }}"
+        state: directory
+        owner: user1
+        group: user1
+        mode: '0755'
+
+    - name: Clone the repository if not present
       git:
-        repo: 'https://github.com/2guno/toy_project.git'
-        dest: /home/user1
+        repo: "{{ repo_url }}"
+        dest: "{{ project_dir }}"
         version: worker
         force: yes
+        update: yes
+        accept_hostkey: yes
+      become_user: user1
+      environment:
+        GIT_SSL_NO_VERIFY: "true"
+        http_proxy: ""
+        https_proxy: ""
+        no_proxy: "localhost,127.0.0.1,::1"
 
-    - name: Run docker-compose up
-      shell: docker-compose up -d
+    - name: Pull latest changes from worker branch
+      shell: |
+        git pull origin worker
       args:
-        chdir: /home/ubuntu/worker_dir
+        chdir: "{{ project_dir }}"
+      become_user: user1
+
+    - name: Run docker-compose stack
+      shell: docker stack deploy -c=docker-compose.yml web
+      args:
+        chdir: "{{ project_dir }}"
+
+    - name: List running containers
+      shell: docker container ls
+      register: docker_ps_output
+
+    - name: Show running containers
+      debug:
+        var: docker_ps_output.stdout_lines
