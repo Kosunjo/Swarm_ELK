@@ -1,5 +1,4 @@
----
-- name: Ping all hosts
+- name: Setup and deploy project
   hosts: all
   become: true
   become_method: sudo
@@ -10,14 +9,14 @@
     ansible_become_password: ""
 
   tasks:
-    - name: Ping
+    - name: Ping the server
       ansible.builtin.ping:
 
-    - name: show ip server
+    - name: Show server IP
       debug:
         msg: "Host IP is {{ ansible_default_ipv4.address }}"
 
-    - name: show pwd
+    - name: Show current working directory
       shell: pwd
       register: current_dir
 
@@ -55,7 +54,7 @@
         chdir: "{{ project_dir }}"
       become_user: user1
 
-    - name: Run docker-compose up
+    - name: Run docker-compose stack
       shell: docker stack deploy -c=docker-compose.yml web
       args:
         chdir: "{{ project_dir }}"
