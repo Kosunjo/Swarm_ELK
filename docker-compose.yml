@@ -1,0 +1,316 @@
+version: "3.5"
+services:
+  # --- Zookeeper, Kafka, Kafka Manager, Elasticsearch, Kibana 정의 (이전과 동일) ---
+  daa-zoo1:
+    image: zookeeper:3.8.0
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    hostname: daa-zoo1
+    container_name: daa-zoo1
+    ports:
+      - "2181:2181"
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경 (일관성)
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_SERVERS: server.1=daa-zoo1:2888:3888;server.2=daa-zoo2:2888:3888;server.3=daa-zoo3:2888:3888;
+
+  daa-zoo2:
+    image: zookeeper:3.8.0
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    hostname: daa-zoo2
+    container_name: daa-zoo2
+    ports:
+      - "2182:2182" # 외부 포트 변경 (2181과 충돌 방지)
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    environment:
+      ZOOKEEPER_SERVER_ID: 2
+      ZOOKEEPER_CLIENT_PORT: 2182 # 클라이언트 포트 변경
+      ZOOKEEPER_SERVERS: server.1=daa-zoo1:2888:3888;server.2=daa-zoo2:2888:3888;server.3=daa-zoo3:2888:3888;
+
+  daa-zoo3:
+    image: zookeeper:3.8.0
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    hostname: daa-zoo3
+    container_name: daa-zoo3
+    ports:
+      - "2183:2183" # 외부 포트 변경 (2181과 충돌 방지)
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    environment:
+      ZOOKEEPER_SERVER_ID: 3
+      ZOOKEEPER_CLIENT_PORT: 2183 # 클라이언트 포트 변경
+      ZOOKEEPER_SERVERS: server.1=daa-zoo1:2888:3888;server.2=daa-zoo2:2888:3888;server.3=daa-zoo3:2888:3888;
+
+  daa-kafka1:
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    image: wurstmeister/kafka:2.13-2.8.1
+    hostname: daa-kafka1
+    container_name: daa-kafka1
+    ports:
+      - "9092:9092"
+      # - "19092" # 내부 포트는 외부 노출 불필요
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    environment:
+      KAFKA_BROKER_ID: 1
+      # KAFKA_PRODUCER_MAX_REQUEST_SIZE: 536870912 # 필요시 주석 해제
+      # CONNECT_PRODUCER_MAX_REQUEST_SIZE: 536870912 # 필요시 주석 해제
+      KAFKA_LISTENERS: INSIDE://:19092,OUTSIDE://:9092 # 컨테이너 내부, 외부 리스너 설정 간소화
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://daa-kafka1:19092,OUTSIDE://localhost:9092 # 외부 접속 시 localhost 사용 (로컬 환경 기준)
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: "daa-zoo1:2181,daa-zoo2:2182,daa-zoo3:2183"
+      KAFKA_LOG_DIRS: "/kafka/logs"
+      # KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO" # 필요시 주석 해제
+      # KAFKA_JMX_OPTS: "-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false -Djava.rmi.server.hostname=daa-kafka1 -Dcom.sun.management.jmxremote.rmi.port=9992" # 필요시 주석 해제
+      # JMX_PORT: 9992 # 필요시 주석 해제
+    healthcheck:
+      test: ["CMD", "bash", "-c", "nc -z localhost 9092"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - daa-zoo1
+      - daa-zoo2
+      - daa-zoo3
+
+  daa-kafka2:
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    image: wurstmeister/kafka:2.13-2.8.1
+    hostname: daa-kafka2
+    container_name: daa-kafka2
+    ports:
+      - "9093:9093"
+      # - "19093" # 내부 포트 외부 노출 불필요
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_LISTENERS: INSIDE://:19093,OUTSIDE://:9093
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://daa-kafka2:19093,OUTSIDE://localhost:9093 # 외부 접속 시 localhost 사용
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: "daa-zoo1:2181,daa-zoo2:2182,daa-zoo3:2183"
+      KAFKA_LOG_DIRS: "/kafka/logs"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "nc -z localhost 9093"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - daa-zoo1
+      - daa-zoo2
+
+  daa-kafka3:
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    image: wurstmeister/kafka:2.13-2.8.1
+    hostname: daa-kafka3
+    container_name: daa-kafka3
+    ports:
+      - "9094:9094"
+      # - "19093" # 내부 포트 외부 노출 불필요
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_LISTENERS: INSIDE://:19094,OUTSIDE://:9094
+      KAFKA_ADVERTISED_LISTENERS: INSIDE://daa-kafka3:19094,OUTSIDE://localhost:9094 # 외부 접속 시 localhost 사용
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INSIDE:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INSIDE
+      KAFKA_ZOOKEEPER_CONNECT: "daa-zoo1:2181,daa-zoo2:2182,daa-zoo3:2183"
+      KAFKA_LOG_DIRS: "/kafka/logs"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "nc -z localhost 9094"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - daa-zoo1
+      - daa-zoo2
+
+  # *** weather-producer 서비스 수정 ***
+  weather-producer:
+    deploy: 
+      placement:
+        constraints: [node.role == worker]  
+    image: 192.168.0.89:5000/myimg:weather
+    container_name: weather-producer
+    environment:
+      # Kafka 설정
+      - KAFKA_BOOTSTRAP_SERVERS=daa-kafka1:19092,daa-kafka2:19093,daa-kafka3:19094 # 컨테이너 내부 통신용 포트 사용
+      - KAFKA_TOPIC=air-quality-seoul # 토픽 이름 변경 (명확성)
+      # API 설정
+      - WEATHER_API_URL=http://apis.data.go.kr/B552584/ArpltnInforInqireSvc # 기본 URL 유지
+      - API_ENDPOINT=getCtprvnRltmMesureDnsty # 사용할 엔드포인트 명시
+      - WEATHER_API_KEY=845anlixp4ZURKviguWGdgAPCY28n3cv0vZcLptL6dqQJChP+5tyuiIGSVqf3usDpOmSU2E5BAL8XHzoFlfg0A== # *** 중요: 반드시 URL 인코딩 안된 원본 키 사용 ***
+      - SIDO_NAME=전국 # 조회할 시도 이름 명시
+      # 수집 주기 (10분 = 600초, API 제한에 따라 조정 필요)
+      - COLLECTION_INTERVAL=600
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    depends_on:
+      - daa-kafka1
+      - daa-kafka2
+      - daa-kafka3
+
+  stock-producer:
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    image: 192.168.0.89:5000/myimg:stock
+    container_name: stock-producer
+#    volumes: 
+#      - ./stock-producer:/app
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=daa-kafka1:19092,daa-kafka2:19093,daa-kafka3:19094
+      - KAFKA_TOPIC=stock-data
+      - STOCK_API_URL=https://apis.data.go.kr/1160100/service/GetStockSecuritiesInfoService
+      - STOCK_API_KEY=845anlixp4ZURKviguWGdgAPCY28n3cv0vZcLptL6dqQJChP+5tyuiIGSVqf3usDpOmSU2E5BAL8XHzoFlfg0A==
+      - API_ENDPOINT=getStockPriceInfo
+      - COLLECTION_INTERVAL=60
+    networks:
+      - elk-kafka-network
+    depends_on:
+      - daa-kafka1
+      - daa-kafka2
+      - daa-kafka3
+
+
+  # Kafka Manager (선택 사항, 필요 없다면 제거 가능)
+  daa-kafka-manager:
+    image: hlebalbau/kafka-manager:2.0.0.2
+    deploy: 
+      placement:
+        constraints: [node.role == manager]
+    container_name: daa-kafka-manager
+    restart: unless-stopped # on-failure -> unless-stopped 변경 (일반적)
+    ports: 
+      - "9000:9000"
+    environment:
+      ZK_HOSTS: "daa-zoo1:2181,daa-zoo2:2182,daa-zoo3:2183"
+      APPLICATION_SECRET: "random-secret" # 더 안전한 값으로 변경 권장
+      # KM_ARGS 제거 (필요시 추가)
+    command: # 커맨드 형식 수정 및 인증 제거 (개발 편의상, 필요시 복구)
+      - -Dcmak.zkhosts=daa-zoo1:2181,daa-zoo2:2182,daa-zoo3:2183
+      # - -DbasicAuthentication.enabled=true
+      # - -DbasicAuthentication.username=kafka-admin
+      # - -DbasicAuthentication.password=kafka-admin#
+
+  
+  nginx:
+    image: 192.168.0.89:5000/mynginx:1.0
+    deploy:
+      replicas: 2
+      placement:
+        constraints: 
+          - node.labels.type == web
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+    environment:
+      SERVICE_PORTS: 80
+    networks:
+      - web1
+  
+  #haproxy 추가
+  proxy:
+    image: dockercloud/haproxy
+    depends_on:
+      - nginx
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 80:80
+    networks:
+      - web1  #수정해야함.
+    deploy:
+      mode: replicated  # global 로 변경해야 한다
+      placement:
+        constraints: [node.role == manager]
+
+  elasticsearch:
+    image: 192.168.0.89:5000/my-elasticsearch:1.0
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    container_name: elasticsearch
+    volumes:
+      - es_data:/usr/share/elasticsearch/data # 볼륨 이름 변경 (일관성)
+    environment:
+      - discovery.type=single-node
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m" # 메모리 제한 설정 (권장)
+    #  - xpack.security.enabled=true    #보안기능 비활성화
+    #  - ELASTIC_PASSWORD=test123
+    ports:
+      - "9200:9200"
+      # - "9300:9300" # Transport 포트는 내부 통신용, 외부 노출 불필요
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    # depends_on 제거 (Logstash/Kibana가 ES에 의존하므로 순서상 문제 없음)
+
+  logstash:
+    image: 192.168.0.89:5000/mylogstash:1.0
+    deploy: 
+      placement:
+        constraints: [node.role == worker]
+    container_name: logstash
+    restart: unless-stopped
+    environment:
+      - "LS_JAVA_OPTS=-Xms256m -Xmx512m"
+      - KAFKA_BOOTSTRAP_SERVERS=daa-kafka1:19092,daa-kafka2:19093,daa-kafka3:19094
+      - ES_HOST=elasticsearch
+      - ES_PORT=9200
+    networks:
+      - elk-kafka-network
+    depends_on:
+      - elasticsearch
+      - daa-kafka1
+      - daa-kafka2
+      - daa-kafka3
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.10.2 #kibana 버전 변경.
+    deploy: 
+      placement:
+        constraints: [node.role == manager]
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200 # 컨테이너 이름으로 ES 주소 설정
+    #  - ELASTICSEARCH_USERNAME=elastic
+    #  - ELASTICSEARCH_PASSWORD=test123 # <-- 실제 elastic 사용자 비밀번호로 변경!
+    #  - xpack.maps.showMapVisualizationTypes=true
+      # - SERVER_NAME=kibana # 불필요
+      # - SERVER_HOST=0.0.0.0 # 불필요 (기본값)
+    #  - xpack.maps.enabled=true
+
+    networks:
+      - elk-kafka-network # 네트워크 이름 변경
+    depends_on:
+      - elasticsearch # Elasticsearch가 먼저 실행되도록 명시
+
+volumes:
+  es_data: # 볼륨 이름 변경 (일관성)
+    driver: local
+  # Zookeeper/Kafka 볼륨 정의 제거 (위에 호스트 경로로 직접 마운트)
+
+networks:
+  elk-kafka-network: # 네트워크 이름 변경
+    driver: overlay
+  web1:
+    driver: overlay

@@ -1,0 +1,8 @@
+/kafka
+/kafka_logs
+/zookeeper
+/zookeeper_data
+/zookeeper_datalog
+/zookeeper_logs
+test.txt
+EOF

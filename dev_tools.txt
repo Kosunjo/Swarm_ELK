@@ -1,0 +1,95 @@
+#geo_point 추가
+
+PUT _index_template/air_quality_seoul_template
+{
+  "index_patterns": ["air-quality-seoul-*"],
+  "priority": 500,
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 1
+    },
+    "mappings": {
+      "properties": {
+        "station": {
+          "properties": {
+            "location": {
+              "type": "geo_point"
+            },
+            "name": {
+              "type": "keyword"
+            },
+            "province": {
+              "type": "keyword"
+            }
+          }
+        },
+        "measurement": {
+          "properties": {
+            "measured_at": {
+              "type": "date"
+            },
+            "measured_time_str": {
+              "type": "keyword"
+            }
+          }
+        },
+        "@timestamp": {
+          "type": "date"
+        },
+        "air_quality": {
+          "properties": {
+            "pm10": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"},
+                "flag": {"type": "keyword"}
+              }
+            },
+            "pm25": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"},
+                "flag": {"type": "keyword"}
+              }
+            },
+            "so2": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"},
+                "flag": {"type": "keyword"}
+              }
+            },
+            "co": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"},
+                "flag": {"type": "keyword"}
+              }
+            },
+            "o3": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"},
+                "flag": {"type": "keyword"}
+              }
+            },
+            "no2": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"},
+                "flag": {"type": "keyword"}
+              }
+            },
+            "khai": {
+              "properties": {
+                "value": {"type": "float"},
+                "grade": {"type": "integer"}
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
